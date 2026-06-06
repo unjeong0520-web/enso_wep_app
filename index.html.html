@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>엘니뇨 기후변화 통합 탐구 시뮬레이터</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body { background-color: #F8FAFC; font-family: 'Pretendard', sans-serif; }
+        .tab-content { display: none; }
+        .tab-active { display: block; }
+        .nav-btn.active { background-color: #DBEAFE; color: #1E40AF; border: 2px solid #3B82F6; }
+        /* 토스트 알림 애니메이션 효과 */
+        .toast-animation {
+            animation: slideIn 0.3s ease-out forwards, fadeOut 0.3s ease-in 2.7s forwards;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(1rem); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="min-h-screen text-gray-900 relative">
+
+    <main class="p-6 md:p-12 max-w-7xl mx-auto">
+        <!-- 헤더 -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-extrabold text-gray-900 mb-6">엘니뇨가 지구 환경과 생태계에 미치는 영향 탐구</h1>
+            <div class="bg-indigo-900 text-white p-6 rounded-2xl shadow-lg mb-8">
+                <h3 class="font-bold text-lg mb-2 flex items-center gap-2">
+                    <i data-lucide="book-open" class="w-5 h-5"></i> 교육과정 성취기준
+                </h3>
+                <p class="text-indigo-100 text-sm leading-relaxed">
+                    <span class="font-bold text-white">[10통과2-02-03]</span> 온실효과 강화로 인한 지구온난화의 메커니즘을 이해하고, 엘니뇨, 사막화 등과 같은 현상이 지구 환경과 인간 생활에 미치는 영향과 대처 방안을 분석할 수 있다.
+                </p>
+            </div>
+        </header>
+
+        <!-- 탭 버튼 -->
+        <nav class="flex flex-wrap gap-3 mb-10" id="nav-tabs">
+            <button onclick="switchTab(event, 'intro')" class="nav-btn active px-6 py-3 rounded-xl font-bold border-2 border-gray-200 hover:bg-gray-50">1. 도입</button>
+            <button onclick="switchTab(event, 'explore')" class="nav-btn px-6 py-3 rounded-xl font-bold border-2 border-gray-200 hover:bg-gray-50">2. 데이터 탐색</button>
+            <button onclick="switchTab(event, 'analysis')" class="nav-btn px-6 py-3 rounded-xl font-bold border-2 border-gray-200 hover:bg-gray-50">3. 엘니뇨의 영향 분석</button>
+            <button onclick="switchTab(event, 'proposal')" class="nav-btn px-6 py-3 rounded-xl font-bold border-2 border-gray-200 hover:bg-gray-50">4. 탐구 워크시트</button>
+            <button id="dashboard-nav-btn" onclick="openDashboard()" class="px-6 py-3 rounded-xl font-bold bg-gray-800 text-white ml-auto flex items-center gap-2 hover:bg-gray-700 transition">
+                <i data-lucide="lock" class="w-4 h-4"></i> 교사 대시보드
+            </button>
+        </nav>
+
+        <!-- 1. 도입 -->
+        <section id="tab-intro" class="tab-content tab-active space-y-8">
+            <div class="bg-white p-8 rounded-2xl shadow-sm border">
+                <h2 class="text-2xl font-bold mb-4 text-gray-800">기상 이변과 엘니뇨 탐구</h2>
+                <p class="text-gray-700 leading-relaxed mb-6">
+                    지구 온난화와 함께 나타나는 엘니뇨 현상은 전 지구적 규모의 기후 변화를 유발한다. 영상을 통해 동태평양 해수면 온도 상승과 세계 각 지역에서 발생하는 가뭄, 폭염, 홍수 등의 기상 현상 사이의 연관성을 탐구해 보자.
+                </p>
+                <div class="aspect-video bg-gray-900 rounded-2xl overflow-hidden shadow-xl relative">
+                    <img src="https://img.youtube.com/vi/wVlfyhs64IY/maxresdefault.jpg" alt="영상 썸네일" class="w-full h-full object-cover opacity-60">
+                    <a href="https://www.youtube.com/watch?v=wVlfyhs64IY" target="_blank" class="absolute inset-0 flex flex-col items-center justify-center text-white">
+                        <i data-lucide="play-circle" class="w-20 h-20 mb-4"></i>
+                        <span class="text-xl font-bold bg-black/50 px-4 py-2 rounded-lg">영상 새 창에서 보기</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 데이터 탐색 -->
+        <section id="tab-explore" class="tab-content space-y-8">
+            <div class="bg-white p-8 rounded-2xl shadow-sm border">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">ENSO 상호작용 시뮬레이터</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-1 space-y-6">
+                        <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100">
+                            <label class="block font-bold text-blue-900 mb-6">기후 상태 슬라이더</label>
+                            <input type="range" min="0" max="2" step="1" value="1" class="w-full accent-blue-600 h-3" oninput="updateENSO(this.value)">
+                            <div class="flex justify-between text-xs font-bold text-blue-600 mt-2">
+                                <span>라니냐</span> <span>평상시</span> <span>엘니뇨</span>
+                            </div>
+                        </div>
+                        <div id="info-card" class="bg-gray-100 p-6 rounded-2xl border border-gray-200">
+                            <h4 id="enso-title" class="font-bold text-lg mb-2 text-indigo-900">평상시 (Neutral)</h4>
+                            <p id="enso-desc" class="text-sm text-gray-700 leading-relaxed">무역풍이 강하게 불어 서태평양에 따뜻한 해수층이 형성되고, 동태평양에서는 심층의 차가운 물이 올라오는 용승 현상이 발생합니다.</p>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 flex flex-col items-center">
+                        <img id="enso-image" src="https://raw.githubusercontent.com/unjeong0520-web/enso-app/main/WalkerNeutral.jpg" alt="ENSO Condition" class="w-full h-auto rounded-lg shadow-sm mb-4">
+                        <img id="sst-image" src="https://raw.githubusercontent.com/unjeong0520-web/enso-app/main/images/sst_normal.gif" class="w-full h-auto rounded-lg shadow-sm">
+                        <p class="text-slate-500 text-sm mt-4 italic">출처: NOAA Climate.gov</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 영향 분석 -->
+        <section id="tab-analysis" class="tab-content space-y-8">
+            <div class="bg-white p-8 rounded-2xl shadow-sm border">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">엘니뇨로 인한 기후 변화</h2>
+                <div class="space-y-8">
+                    <div>
+                        <h4 class="font-bold text-lg mb-2">엘니뇨 시기 겨울철(DJF) 기후 패턴</h4>
+                        <img src="https://raw.githubusercontent.com/unjeong0520-web/enso-app/main/images/ElNinoDJF.jpg" class="w-full rounded-xl shadow-md">
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-lg mb-2">엘니뇨 시기 여름철(JJA) 기후 패턴</h4>
+                        <img src="https://raw.githubusercontent.com/unjeong0520-web/enso-app/main/images/ElNinoJJA.jpg" class="w-full rounded-xl shadow-md">
+                    </div>
+                    <div class="mt-12">
+                        <h4 class="font-bold text-xl mb-4 text-gray-800">세계 자연 재해 데이터 탐구</h4>
+                        <iframe src="https://ourworldindata.org/explorers/natural-disasters?facet=none&hideControls=true&Disaster+Type=All+disasters&Impact=Deaths&Timespan=Decadal+average&Per+capita=false&country=~OWID_WRL&tab=chart" loading="lazy" style="width: 100%; height: 600px; border: 0px none;" allow="web-share; clipboard-write"></iframe>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. 탐구 워크시트 -->
+        <section id="tab-proposal" class="tab-content space-y-8">
+            <div class="bg-white p-8 rounded-2xl shadow-sm border space-y-6">
+                <h2 class="text-2xl font-bold">4. 탐구 워크시트</h2>
+                <div>
+                    <label class="block font-bold mb-2">학번/이름</label>
+                    <input type="text" id="student-name-input" class="w-full p-3 border rounded-xl" placeholder="예: 10101 홍길동">
+                </div>
+                
+                <div class="space-y-6">
+                    <div class="p-6 bg-gray-50 rounded-2xl border">
+                        <h4 class="font-bold text-blue-800">[탐구 1] 엘니뇨의 발생 원리 탐구</h4>
+                        <p class="text-sm">자료를 바탕으로 적도 태평양의 평상시와 엘니뇨 발생 시 해수면 온도 분포를 비교하고, 서태평양과 동태평양의 수온 차이가 나타나는 이유를 설명해 보자.</p>
+                        <textarea id="report-1" class="w-full h-24 mt-2 p-4 border rounded-xl" placeholder="답안을 입력해 주세요."></textarea>
+                        <details class="text-blue-600 font-bold mt-2 cursor-pointer"><summary>모범답안 보기</summary><p class="text-gray-700 text-sm font-normal">평상시에는 무역풍이 따뜻한 표층 해수를 서태평양으로 이동시키기 때문에 서태평양의 해수면 온도는 높게 나타난다. 반면 동태평양에서는 차가운 심층수가 상승하는 용승 현상이 발생하여 해수면 온도는 낮게 나타난다. 엘니뇨가 발생하면 무역풍이 약해져 따뜻한 해수가 중·동태평양으로 이동하므로 동태평양의 해수면 온도가 상승하고 서태평양과 동태평양의 수온 차이가 감소한다.</p></details>
+                    </div>
+
+                    <div class="p-6 bg-gray-50 rounded-2xl border">
+                        <h4 class="font-bold text-blue-800">[탐구 2] 엘니뇨와 극한 기후 탐구</h4>
+                        <p class="text-sm">자료를 바탕으로 극한 기후로 인한 피해가 큰 지역을 확인하고, 기후 변화와 엘니뇨가 이러한 현상에 미칠 수 있는 영향을 추론해 보자.</p>
+                        <textarea id="report-2" class="w-full h-24 mt-2 p-4 border rounded-xl" placeholder="답안을 입력해 주세요."></textarea>
+                        <details class="text-blue-600 font-bold mt-2 cursor-pointer"><summary>모범답안 보기</summary><p class="text-gray-700 text-sm font-normal">자료를 보면 북아메리카와 유럽 일부 지역에서 극한 기후로 인한 피해가 상대적으로 크게 나타난다. 최근 기후 변화로 인해 지구 평균 기온이 상승하면서 폭염과 같은 극한 기후 현상의 발생 빈도와 강도가 증가하고 있다. 또한 엘니뇨가 발생하면 전 세계 대기 순환이 변화하여 일부 지역에서는 폭염과 가뭄이 심해지고, 다른 지역에서는 폭우와 홍수가 증가할 수 있다. 따라서 기후 변화와 엘니뇨는 극한 기후 현상을 강화하여 자연환경과 인간 생활에 다양한 피해를 줄 수 있다.</p></details>
+                    </div>
+
+                    <div class="p-6 bg-gray-50 rounded-2xl border">
+                        <h4 class="font-bold text-blue-800">[탐구 3] 엘니뇨 대응 방안 탐구</h4>
+                        <p class="text-sm">엘니뇨로 인한 기후 재해 피해를 줄이기 위해 실천할 수 있는 대응 방안과 정책을 제안해 보자.</p>
+                        <textarea id="report-3" class="w-full h-24 mt-2 p-4 border rounded-xl" placeholder="답안을 입력해 주세요."></textarea>
+                        <details class="text-blue-600 font-bold mt-2 cursor-pointer"><summary>모범답안 보기</summary><p class="text-gray-700 text-sm font-normal">엘니뇨는 폭염, 가뭄, 홍수, 산불과 같은 기후 재해를 증가시킬 수 있으므로 이에 대한 대비가 필요하다. 정부는 기상 예측 및 조기경보 시스템을 강화하고 재난 대응 인프라를 확충해야 한다. 지역사회는 재난 대응 교육과 비상 대피 체계를 마련해야 하며, 개인은 기상 정보를 확인하고 물과 에너지를 절약하는 등의 노력을 실천할 수 한다. 이러한 대응은 엘니뇨로 인한 피해를 줄이고 기후 변화에 대한 적응력을 높이는 데 도움이 된다.</p></details>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 border rounded-2xl mt-8">
+                    <h3 class="font-bold text-xl mb-4">객관식 형성평가</h3>
+                    <div class="mb-6">
+                        <p class="font-bold mb-2">1번. 평상시 서태평양의 해수면 온도가 동태평양보다 높은 이유로 옳은 것은?</p>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q1" value="1"> ① 동태평양의 수심이 더 깊기 때문이다.</label>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q1" value="2"> ② 무역풍이 따뜻한 표층 해수를 서태평양으로 이동시키기 때문이다.</label>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q1" value="3"> ③ 서태평양에서 용승 현상이 강하게 나타나기 때문이다.</label>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q1" value="4"> ④ 동태평양의 태양 복사 에너지가 더 적기 때문이다.</label>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q1" value="5"> ⑤ 서태평양의 해수 염분이 더 높기 때문이다.</label>
+                        <details class="text-blue-600 mt-1 cursor-pointer"><summary>정답 보기</summary>정답: ②</details>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <p class="font-bold mb-1">2번. 엘니뇨 발생 시 나타나는 현상으로 옳은 것을 모두 고른 것은?</p>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-150 mb-3 text-sm text-gray-700 space-y-1">
+                            <p>ㄱ. 무역풍이 약해진다.</p>
+                            <p>ㄴ. 동태평양의 해수면 온도가 상승한다.</p>
+                            <p>ㄷ. 동태평양의 용승이 강화된다.</p>
+                            <p>ㄹ. 서태평양과 동태평양의 수온 차이가 감소한다.</p>
+                        </div>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q2" value="1"> ① ㄱ, ㄴ</label>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q2" value="2"> ② ㄱ, ㄷ</label>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q2" value="3"> ③ ㄱ, ㄴ, ㄹ</label>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q2" value="4"> ④ ㄴ, ㄷ, ㄹ</label>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q2" value="5"> ⑤ ㄱ, ㄴ, ㄷ, ㄹ</label>
+                        <details class="text-blue-600 mt-1 cursor-pointer"><summary>정답 보기</summary>정답: ③ (ㄷ. 엘니뇨 시기에는 무역풍이 약해지므로 동태평양의 용승은 약화됩니다.)</details>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <p class="font-bold mb-2">3번. 엘니뇨가 전 세계 기후에 미치는 영향으로 가장 적절한 것은?</p>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q3" value="1"> ① 모든 지역의 강수량이 증가한다.</label>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q3" value="2"> ② 전 세계 대기 순환 변화로 지역별 기후 이상 현상이 발생할 수 있다.</label>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q3" value="3"> ③ 지구 자전 속도가 감소하여 기온이 상승한다.</label>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q3" value="4"> ④ 모든 지역에서 가뭄이 발생한다.</label>
+                        <label class="block mb-1 cursor-pointer"><input type="radio" name="q3" value="5"> ⑤ 태양 복사 에너지가 증가하여 엘니뇨가 발생한다.</label>
+                        <details class="text-blue-600 mt-1 cursor-pointer"><summary>정답 보기</summary>정답: ②</details>
+                    </div>
+                </div>
+
+                <button onclick="submitWorksheet()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-blue-700 transition font-sans">워크시트 통합 제출하기</button>
+                
+                <div class="bg-gray-50 p-6 rounded-2xl text-center border">
+                    <p class="font-bold mb-4">내 탐구결과 및 교사 피드백 실시간 조회</p>
+                    <input type="text" id="query-student-id" class="w-full p-3 border rounded-xl mb-2" placeholder="학번 입력 (예: 10101)">
+                    <button onclick="queryFeedback()" class="w-full bg-gray-800 text-white font-bold py-3 rounded-xl hover:bg-black transition">피드백 조회</button>
+                    <div id="feedback-display" class="hidden mt-4 text-left p-4 bg-white border border-gray-200 rounded-xl"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 교사 대시보드 화면 -->
+        <section id="tab-dashboard" class="tab-content space-y-8">
+            <div class="bg-white p-8 rounded-2xl shadow-sm border">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                            <i data-lucide="layout-dashboard" class="text-blue-600"></i> 교사 관리 대시보드
+                        </h2>
+                        <p class="text-sm text-gray-500 mt-1">학생들의 실시간 제출 성과와 탐구보고서를 통합 관리하고 피드백을 부여할 수 있습니다.</p>
+                    </div>
+                    <button onclick="downloadCSV()" class="bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-xl hover:bg-emerald-700 transition flex items-center gap-2 self-stretch sm:self-auto justify-center shadow">
+                        <i data-lucide="download" class="w-4 h-4"></i> CSV 다운로드
+                    </button>
+                </div>
+
+                <!-- 제출 상태 요약 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-blue-50 p-6 rounded-2xl border border-blue-100 shadow-sm">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-blue-900 font-bold text-sm">실시간 제출 인원 현황</span>
+                            <span class="bg-blue-200 text-blue-900 text-xs px-2 py-0.5 rounded-full font-bold">총 정원: 25명</span>
+                        </div>
+                        <div class="text-3xl font-extrabold text-blue-900" id="submit-ratio-text">0 / 25명 (0%)</div>
+                        <div class="w-full bg-blue-100 h-2.5 rounded-full mt-3">
+                            <div id="submit-progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 md:col-span-2 shadow-sm">
+                        <span class="text-slate-600 font-bold text-sm block mb-1">제출 완료 학생 형성평가 성적 간이 분포</span>
+                        <div style="height: 60px;" class="flex items-end gap-1.5 pt-2" id="score-bar-container">
+                            <!-- 간이 그래프 바들이 채워지는 곳 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 시각화 차트 영역 -->
+                <div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 mb-8 shadow-sm">
+                    <h3 class="font-bold text-gray-700 mb-4 text-sm flex items-center gap-1.5">
+                        <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-600"></i> 형성평가 점수 모니터링 그래프
+                    </h3>
+                    <div class="h-64 relative">
+                        <canvas id="dashboardChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 누적 데이터 리스트 테이블 -->
+                <div class="border rounded-2xl overflow-hidden shadow-sm">
+                    <div class="p-4 bg-gray-50 border-b flex justify-between items-center flex-wrap gap-2">
+                        <span class="font-bold text-gray-700 text-sm">누적 제출 데이터 기록부 (전체 학생 대비 현황 반영)</span>
+                        <span class="text-xs text-gray-500">실시간 최신순 기록</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-white border-b border-gray-100 text-gray-500 font-semibold">
+                                    <th class="p-4 w-32">학번/이름</th>
+                                    <th class="p-4 text-center w-24">형성평가</th>
+                                    <th class="p-4">[탐구 1] 발생 원리</th>
+                                    <th class="p-4">[탐구 2] 극한 기후</th>
+                                    <th class="p-4">[탐구 3] 대응 방안</th>
+                                    <th class="p-4 text-center w-36">AI 피드백 조치</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-table-body" class="divide-y divide-gray-100">
+                                <!-- 데이터 리스트 동적 삽입 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- [커스텀 해결책 1] 비밀번호 검증용 커스텀 모달 -->
+    <div id="password-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-6 space-y-4">
+            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <i data-lucide="lock" class="w-5 h-5 text-indigo-600"></i> 교사용 비밀번호 확인
+            </h3>
+            <p class="text-sm text-gray-500">대시보드 관리자 페이지로 이동하기 위해 비밀번호를 입력해주세요.</p>
+            <input type="password" id="password-input" class="w-full p-3 border rounded-xl focus:outline-blue-500" placeholder="비밀번호 입력">
+            <p id="password-error" class="text-red-500 text-xs hidden">비밀번호가 일치하지 않습니다. 다시 입력해주세요.</p>
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closePasswordModal()" class="px-4 py-2 border rounded-xl font-bold bg-white text-gray-700 hover:bg-gray-100 text-sm">취소</button>
+                <button onclick="checkPassword()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- [커스텀 해결책 2] 제출 시 컨펌 창 대응을 위한 커스텀 컨펌 모달 -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-6 space-y-4">
+            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <i data-lucide="help-circle" class="w-5 h-5 text-amber-500"></i> 미작성 항목 감지됨
+            </h3>
+            <p id="confirm-message" class="text-sm text-gray-600 leading-relaxed"></p>
+            <div class="flex justify-end gap-2 pt-2">
+                <button id="confirm-cancel-btn" class="px-4 py-2 border rounded-xl font-bold bg-white text-gray-700 hover:bg-gray-100 text-sm">취소</button>
+                <button id="confirm-ok-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow">제출 완료</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- [커스텀 해결책 3] 실시간 알림 피드백을 전달할 우아한 토스트 알림창 컨테이너 -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full p-4 md:p-0"></div>
+
+    <!-- AI 피드백 처리 모달 레이아웃 -->
+    <div id="feedback-modal" class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-6 bg-indigo-900 text-white flex justify-between items-center">
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                    <i data-lucide="cpu" class="w-5 h-5 text-indigo-300"></i> AI 평가 및 피드백 수정/전송
+                </h3>
+                <button onclick="closeModal()" class="text-indigo-200 hover:text-white transition"><i data-lucide="x"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-5 flex-1">
+                <div>
+                    <span class="text-xs font-bold text-gray-400 block uppercase mb-1">대상 학습자</span>
+                    <h4 id="modal-student-name" class="text-lg font-extrabold text-blue-900"></h4>
+                </div>
+                
+                <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 text-sm text-gray-700">
+                    <p><strong>[탐구 1]:</strong> <span id="modal-text-1"></span></p>
+                    <p><strong>[탐구 2]:</strong> <span id="modal-text-2"></span></p>
+                    <p><strong>[탐구 3]:</strong> <span id="modal-text-3"></span></p>
+                </div>
+
+                <button onclick="triggerAIEval()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-sm text-sm">
+                    <i data-lucide="wand-2" class="w-4 h-4"></i> AI 분석 맞춤형 피드백 초안 작성
+                </button>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-bold text-gray-700">교사 최종 수정 및 검토 공간</label>
+                    <textarea id="modal-feedback-textarea" class="w-full h-40 p-4 border rounded-xl text-sm leading-relaxed" placeholder="AI 피드백 결과를 자유롭게 수정하거나 추가 지도를 입력해 주세요."></textarea>
+                </div>
+            </div>
+            <div class="p-4 bg-gray-50 border-t flex justify-end gap-3">
+                <button onclick="closeModal()" class="px-5 py-2.5 border rounded-xl font-bold bg-white text-gray-700 hover:bg-gray-100 transition text-sm">취소</button>
+                <button onclick="saveFeedback()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition flex items-center gap-1.5 text-sm">
+                    <i data-lucide="send" class="w-4 h-4"></i> 전송 및 영구저장
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- -->
+    <script>
+        // ----------------------------------------------------
+        // 데이터 핸들링 및 상태 관리 (안전한 예외 처리 적용)
+        // ----------------------------------------------------
+        const ADMIN_PW = "1234";
+        const TOTAL_STUDENTS = 25;
+        let isAuthenticated = false; // 로그인 세션 유지용 플래그
+        
+        // 목업 시드 데이터 정의 (학생 제출 성적이 비어있을 때 바로 대시보드 검증이 가능하도록 자동 바인딩)
+        const mockSeedData = [
+            { 
+                id: 1, 
+                student: "10105 김민우", 
+                score: 100, 
+                answers: { q1: "2", q2: "3", q3: "2" }, 
+                r1: "평상시에는 무역풍에 의해 따뜻한 물이 서쪽으로 밀려가 용승이 일어나지만, 엘니뇨 시기에는 무역풍이 약화되어 동태평양 수온이 비정상적으로 높아집니다.", 
+                r2: "세계 기후지도를 관찰하면 남아메리카 서안과 북아메리카 일부 지역에 폭우가 내리고 인도네시아 일대에는 심각한 가뭄이 발생하여 기상이변 피해가 큽니다.", 
+                r3: "국가적 차원의 재해 경보 시스템을 고도화하고 탄소 배출 저감 정책을 추진하여 전지구적 기후 안정을 도모해야 합니다.", 
+                feedback: "[AI 맞춤 기후과학 분석 가이드]\n* 형성평가 점수: 100점/100점\n\n• [탐구 1 피드백]: 무역풍의 약화와 동태평양의 수온 상승, 용승 약화 원리를 정확히 서술하였습니다." 
+            },
+            { 
+                id: 2, 
+                student: "10112 이영희", 
+                score: 66, 
+                answers: { q1: "2", q2: "3", q3: "1" }, 
+                r1: "무역풍이 강하게 안 불어서 따뜻한 물이 동쪽으로 밀려오기 때문에 온도가 올라갑니다.", 
+                r2: "인도네시아와 호주 지역은 비가 오지 않고 건조해져 가뭄 및 산불 피해가 일어납니다.", 
+                r3: "기후 경보에 귀를 기울이고 일상 속에서 에너지를 아껴 온난화를 대처해야 합니다.", 
+                feedback: "" 
+            }
+        ];
+
+        let records = [];
+        
+        // Iframe의 localStorage 샌드박스 정책 우회 및 초기 세션 주입
+        try {
+            const raw = localStorage.getItem('el_nino_records');
+            if (raw) {
+                records = JSON.parse(raw);
+            } else {
+                records = [...mockSeedData];
+                localStorage.setItem('el_nino_records', JSON.stringify(records));
+            }
+        } catch (e) {
+            console.warn("로컬 저장소 접근 권한이 제한되었습니다. 인-메모리 보관함(목업 포함)으로 자동 유지됩니다.", e);
+            records = [...mockSeedData];
+        }
+
+        let activeChart = null;
+        let selectedRecordIndex = null;
+
+        //        // ----------------------------------------------------
+        // [우회 플로우] 커스텀 토스트 알림 함수
+        // ----------------------------------------------------
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = "bg-gray-800 text-white";
+            let icon = "info";
+            
+            if (type === 'success') {
+                bgClass = "bg-emerald-600 text-white";
+                icon = "check-circle";
+            } else if (type === 'error') {
+                bgClass = "bg-rose-600 text-white";
+                icon = "alert-triangle";
+            }
+
+            toast.className = `${bgClass} p-4 rounded-xl shadow-lg flex items-center gap-3 toast-animation pointer-events-auto`;
+            toast.innerHTML = `
+                <i data-lucide="${icon}" class="w-5 h-5 flex-shrink-0"></i>
+                <span class="text-sm font-semibold">${message}</span>
+            `;
+            
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // ----------------------------------------------------
+        // [우회 플로우] 커스텀 비동기 컨펌창 함수
+        // ----------------------------------------------------
+        function showCustomConfirm(message, onOk, onCancel) {
+            const modal = document.getElementById('confirm-modal');
+            const messageEl = document.getElementById('confirm-message');
+            const cancelBtn = document.getElementById('confirm-cancel-btn');
+            const okBtn = document.getElementById('confirm-ok-btn');
+
+            messageEl.textContent = message;
+            modal.classList.remove('hidden');
+
+            // 기존 이벤트 바인딩 초기화 및 재할당
+            cancelBtn.onclick = function() {
+                modal.classList.add('hidden');
+                if (onCancel) onCancel();
+            };
+
+            okBtn.onclick = function() {
+                modal.classList.add('hidden');
+                if (onOk) onOk();
+            };
+        }
+
+        // ----------------------------------------------------
+        // [우회 플로우] 비밀번호용 모달 제어 함수
+        // ----------------------------------------------------
+        function openPasswordModal() {
+            document.getElementById('password-input').value = "";
+            document.getElementById('password-error').classList.add('hidden');
+            document.getElementById('password-modal').classList.remove('hidden');
+            document.getElementById('password-input').focus();
+        }
+
+        function closePasswordModal() {
+            document.getElementById('password-modal').classList.add('hidden');
+        }
+
+        function checkPassword() {
+            const inputVal = document.getElementById('password-input').value;
+            if (inputVal === ADMIN_PW) {
+                isAuthenticated = true;
+                closePasswordModal();
+                switchToDashboard();
+                showToast("인증 성공! 교사 대시보드를 표시합니다.", "success");
+            } else {
+                document.getElementById('password-error').classList.remove('hidden');
+            }
+        }
+
+        // 키보드 엔터 지원
+        document.getElementById('password-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+
+        // ----------------------------------------------------
+        // 네비게이션 및 기본 컨트롤러
+        // ----------------------------------------------------
+        function switchTab(event, id) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('tab-active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            
+            // 대시보드 버튼 전용 액티브 스타일 복구
+            const dashBtn = document.getElementById('dashboard-nav-btn');
+            if (dashBtn) {
+                dashBtn.classList.remove('bg-blue-100', 'text-blue-900', 'border-2', 'border-blue-600');
+                dashBtn.classList.add('bg-gray-800', 'text-white');
+            }
+
+            const targetSection = document.getElementById('tab-' + id);
+            if(targetSection) targetSection.classList.add('tab-active');
+            
+            if (event && event.currentTarget) event.currentTarget.classList.add('active');
+        }
+
+        function updateENSO(val) {
+            const files = ["LaNina", "Neutral", "ElNino"];
+            document.getElementById('enso-image').src = "https://raw.githubusercontent.com/unjeong0520-web/enso-app/main/Walker" + files[val] + ".jpg";
+            document.getElementById('sst-image').src = "https://raw.githubusercontent.com/unjeong0520-web/enso-app/main/images/sst_" + (files[val] === "Neutral" ? "normal" : files[val].toLowerCase()) + ".gif";
+            
+            const data = [
+                { title: "라니냐 (La Niña)", desc: "무역풍이 평소보다 훨씬 강해져 따뜻한 물이 서쪽으로 더욱 쏠립니다. 동태평양 용승이 최고조에 달해 바다가 매우 차가워집니다." },
+                { title: "평상시 (Neutral)", desc: "무역풍이 강하게 불어 서태평양에 따뜻한 해수층이 형성되고, 동태평양에서는 심층의 차가운 물이 올라오는 용승 현상이 발생합니다." },
+                { title: "엘니뇨 (El Niño)", desc: "무역풍이 약해져 서태평양의 따뜻한 물이 동쪽으로 밀려옵니다. 용승이 억제되어 동태평양 수온이 급격히 상승합니다." }
+            ];
+            document.getElementById('enso-title').innerText = data[val].title;
+            document.getElementById('enso-desc').innerText = data[val].desc;
+        }
+
+        // ----------------------------------------------------
+        // 교사 비밀번호 인증 및 전환 관리 (세션 유지 및 먹통 현상 완벽 조치)
+        // ----------------------------------------------------
+        function openDashboard() { 
+            if (isAuthenticated) {
+                switchToDashboard();
+                return;
+            }
+            openPasswordModal();
+        }
+
+        function switchToDashboard() {
+            // 모든 탭 해제 및 대시보드 표출
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('tab-active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            
+            const dashBtn = document.getElementById('dashboard-nav-btn');
+            if (dashBtn) {
+                dashBtn.classList.add('bg-blue-100', 'text-blue-900', 'border-2', 'border-blue-600');
+                dashBtn.classList.remove('bg-gray-800', 'text-white');
+            }
+
+            const targetSection = document.getElementById('tab-dashboard');
+            if(targetSection) targetSection.classList.add('tab-active');
+            
+            // UI 및 그래프 즉시 드로잉
+            renderDashboard();
+        }
+
+        //        // ----------------------------------------------------
+        // 워크시트 및 데이터 누적 서브밋 제어 (안전 보장형)
+        // ----------------------------------------------------
+        function submitWorksheet() {
+            const studentInfo = document.getElementById('student-name-input').value.trim();
+            if(!studentInfo) {
+                showToast("학번과 이름을 명확하게 적어주시기 바랍니다 (예: 10101 홍길동).", "error");
+                return;
+            }
+
+            const r1Text = document.getElementById('report-1').value.trim();
+            const r2Text = document.getElementById('report-2').value.trim();
+            const r3Text = document.getElementById('report-3').value.trim();
+
+            if(!r1Text || !r2Text || !r3Text) {
+                showCustomConfirm(
+                    "일부 작성하지 않은 탐구 보고서 서술형 항목이 있습니다. 그대로 제출할까요?",
+                    function() {
+                        executeSubmit(studentInfo, r1Text, r2Text, r3Text);
+                    }
+                );
+            } else {
+                executeSubmit(studentInfo, r1Text, r2Text, r3Text);
+            }
+        }
+
+        function executeSubmit(studentInfo, r1Text, r2Text, r3Text) {
+            // 정밀 객관식 형성평가 채점 연산
+            let earnedScore = 0;
+            const q1Answer = document.querySelector('input[name="q1"]:checked')?.value;
+            const q2Answer = document.querySelector('input[name="q2"]:checked')?.value;
+            const q3Answer = document.querySelector('input[name="q3"]:checked')?.value;
+
+            // 1번 정답: ②번(값: 2)
+            if(q1Answer === "2") earnedScore += 33;
+            // 2번 정답: ③번(값: 3)
+            if(q2Answer === "3") earnedScore += 33;
+            // 3번 정답: ②번(값: 2)
+            if(q3Answer === "2") earnedScore += 34;
+
+            // 신규 데이터 레코드 적재
+            const newRecord = {
+                id: Date.now(),
+                student: studentInfo,
+                score: earnedScore,
+                answers: { q1: q1Answer, q2: q2Answer, q3: q3Answer },
+                r1: r1Text || "미제출",
+                r2: r2Text || "미제출",
+                r3: r3Text || "미제출",
+                feedback: ""
+            };
+
+            // 중복 제출 우려를 줄이기 위해 학번 기준 갱신 또는 추가
+            const existingIndex = records.findIndex(r => r.student === studentInfo);
+            if(existingIndex > -1) {
+                records[existingIndex] = newRecord;
+                showToast(`${studentInfo} 학생의 기존 탐구 데이터가 업데이트되었습니다.`, "success");
+            } else {
+                records.push(newRecord);
+                showToast(`${studentInfo} 학생의 탐구 워크시트가 제출되었습니다.`, "success");
+            }
+
+            // 로컬 스토리지 안전 쓰기 및 폴백 유지
+            try {
+                localStorage.setItem('el_nino_records', JSON.stringify(records));
+            } catch(e) {
+                console.warn("Storage write blocked.", e);
+            }
+            
+            // 입력 폼 초기화
+            document.getElementById('student-name-input').value = "";
+            document.getElementById('report-1').value = "";
+            document.getElementById('report-2').value = "";
+            document.getElementById('report-3').value = "";
+            document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+        }
+
+        //        // ----------------------------------------------------
+        // 대시보드 렌더링 및 실시간 비율 산출
+        // ----------------------------------------------------
+        function renderDashboard() {
+            const currentSubmissions = records.length;
+            
+            // 실시간 비율 산출 매핑
+            document.getElementById('submit-ratio-text').innerText = `${currentSubmissions} / ${TOTAL_STUDENTS}명 (${Math.round((currentSubmissions/TOTAL_STUDENTS)*100)}%)`;
+            document.getElementById('submit-progress-bar').style.width = `${Math.min((currentSubmissions/TOTAL_STUDENTS)*100, 100)}%`;
+
+            // 형성평가 점수 분포 간이 그래프
+            const miniGraphContainer = document.getElementById('score-bar-container');
+            miniGraphContainer.innerHTML = '';
+            
+            records.forEach(item => {
+                const bar = document.createElement('div');
+                bar.className = 'w-4 bg-indigo-500 rounded-t-sm transition-all duration-300';
+                bar.style.height = `${item.score}%`;
+                bar.title = `${item.student}: ${item.score}점`;
+                miniGraphContainer.appendChild(bar);
+            });
+
+            // 데이터 표 바인딩
+            const tbody = document.getElementById('dashboard-table-body');
+            tbody.innerHTML = '';
+
+            if(records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-400">현재 수집된 데이터 세트가 없습니다.</td></tr>`;
+            } else {
+                records.forEach((rec, index) => {
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-slate-50 transition border-b border-gray-100 text-gray-600";
+                    row.innerHTML = `
+                        <td class="p-4 font-bold text-gray-900">${rec.student}</td>
+                        <td class="p-4 text-center"><span class="bg-blue-100 text-blue-800 text-xs px-2.5 py-1 rounded-full font-bold">${rec.score}점</span></td>
+                        <td class="p-4 max-w-xs truncate" title="${rec.r1}">${rec.r1}</td>
+                        <td class="p-4 max-w-xs truncate" title="${rec.r2}">${rec.r2}</td>
+                        <td class="p-4 max-w-xs truncate" title="${rec.r3}">${rec.r3}</td>
+                        <td class="p-4 text-center">
+                            <button onclick="openFeedback(${index})" class="text-xs font-bold px-3 py-2 rounded-lg transition ${rec.feedback ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-indigo-600 text-white hover:bg-indigo-700'}">
+                                ${rec.feedback ? '피드백 관리/수정' : 'AI 피드백 검토'}
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            // Chart.js 성적 시각화 호출
+            buildChart();
+            lucide.createIcons();
+        }
+
+        // ----------------------------------------------------
+        // Chart.js 동적 그래프 연동
+        // ----------------------------------------------------
+        function buildChart() {
+            const ctx = document.getElementById('dashboardChart').getContext('2d');
+            const studentLabels = records.map(r => r.student);
+            const scoreValues = records.map(r => r.score);
+
+            if(activeChart) {
+                activeChart.destroy();
+            }
+
+            activeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: studentLabels.length > 0 ? studentLabels : ['제출 데이터 없음'],
+                    datasets: [{
+                        label: '형성평가 득점 현황 (만점: 100점)',
+                        data: scoreValues.length > 0 ? scoreValues : [0],
+                        backgroundColor: 'rgba(79, 70, 229, 0.7)',
+                        borderColor: 'rgb(79, 70, 229)',
+                        borderWidth: 1.5,
+                        borderRadius: 8,
+                        barThickness: 24
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // ----------------------------------------------------
+        // AI 피드백 모달 핸들러 및 검토 수정 적용
+        // ----------------------------------------------------
+        function openFeedback(index) {
+            selectedRecordIndex = index;
+            const target = records[index];
+
+            document.getElementById('modal-student-name').innerText = target.student;
+            document.getElementById('modal-text-1').innerText = target.r1;
+            document.getElementById('modal-text-2').innerText = target.r2;
+            document.getElementById('modal-text-3').innerText = target.r3;
+            document.getElementById('modal-feedback-textarea').value = target.feedback;
+
+            document.getElementById('feedback-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeModal() {
+            document.getElementById('feedback-modal').classList.add('hidden');
+        }
+
+        function triggerAIEval() {
+            const target = records[selectedRecordIndex];
+            
+            let draft = `[AI 맞춤 기후과학 분석 가이드]\n`;
+            draft += `* 형성평가 점수: ${target.score}점/100점\n\n`;
+
+            if(target.r1.includes("무역풍") && target.r1.includes("용승")) {
+                draft += `• [탐구 1 피드백]: 대기 대순환인 '무역풍의 거동'과 동태평양 '용승 현상의 변화'라는 주요 과학적 원리를 인과관계에 맞게 잘 서술하였습니다.\n`;
+            } else {
+                draft += `• [탐구 1 피드백]: 무역풍의 세기 변화와 수온 차이를 잘 표현하였으나, 심층의 차가운 물이 위로 솟구치는 '용승(Upwelling)' 키워드를 결합하여 설명하면 완전성이 더욱 높아질 것입니다.\n`;
+            }
+
+            if(target.r2.length > 25) {
+                draft += `• [탐구 2 피드백]: 엘니뇨가 전 세계적인 대기 흐름의 패턴을 교란하여 각지에 홍수나 가뭄을 미친다는 점을 우수하게 분석해 내었습니다.\n`;
+            } else {
+                draft += `• [탐구 2 피드백]: 세계적으로 기후 영향권이 밀집된 극지 및 대륙 권역에 관한 인과관계를 조금 더 구체화해 보길 권장합니다.\n`;
+            }
+
+            draft += `\n• [종합 지도 제언]: 지구 시스템의 연쇄적인 상호 교류를 입체적인 관점으로 학습하고 있어 발전 가능성이 큽니다.`;
+
+            document.getElementById('modal-feedback-textarea').value = draft;
+        }
+
+        function saveFeedback() {
+            const refined = document.getElementById('modal-feedback-textarea').value;
+            records[selectedRecordIndex].feedback = refined;
+
+            try {
+                localStorage.setItem('el_nino_records', JSON.stringify(records));
+            } catch (e) {
+                console.warn("Storage write failed.", e);
+            }
+            showToast("교사 승인 최종 피드백이 전송 처리되었습니다.", "success");
+            closeModal();
+            renderDashboard();
+        }
+
+        // ----------------------------------------------------
+        // 완벽한 한글 깨짐 방지형 CSV 다운로더
+        // ----------------------------------------------------
+        function downloadCSV() {
+            if(records.length === 0) {
+                showToast("다운로드할 데이터 내역이 존재하지 않습니다.", "error");
+                return;
+            }
+
+            // UTF-8 BOM 헤더를 정의하여 엑셀 실행 시 한글 깨짐 방지
+            let csvContent = "\uFEFF학번/이름,형성평가 점수,탐구1 작성내용,탐구2 작성내용,탐구3 작성내용,교사 피드백\n";
+
+            records.forEach(row => {
+                let r1Clean = row.r1.replace(/"/g, '""');
+                let r2Clean = row.r2.replace(/"/g, '""');
+                let r3Clean = row.r3.replace(/"/g, '""');
+                let fbClean = row.feedback.replace(/"/g, '""');
+
+                csvContent += `"${row.student}","${row.score}점","${r1Clean}","${r2Clean}","${r3Clean}","${fbClean}"\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute("href", url);
+            link.setAttribute("download", `엘니뇨_수집데이터_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("엑셀 파일이 컴퓨터에 저장되었습니다.", "success");
+        }
+
+        // ----------------------------------------------------
+        // 학생 측면의 교사 피드백 개별 실시간 조회 시스템
+        // ----------------------------------------------------
+        function queryFeedback() {
+            const searchId = document.getElementById('query-student-id').value.trim();
+            if(!searchId) {
+                showToast("검색할 본인의 학번을 입력해 주세요.", "error");
+                return;
+            }
+
+            const found = records.find(r => r.student.includes(searchId));
+            const display = document.getElementById('feedback-display');
+            display.classList.remove('hidden');
+
+            if(found) {
+                display.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <span class="font-extrabold text-blue-900">${found.student} 학생의 제출 결과</span>
+                            <span class="text-sm font-bold bg-blue-100 text-blue-800 px-3 py-1 rounded-full">형성평가: ${found.score}점</span>
+                        </div>
+                        <div class="text-sm space-y-1">
+                            <p><strong>내 제출 [탐구 1]:</strong> ${found.r1}</p>
+                            <p><strong>내 제출 [탐구 2]:</strong> ${found.r2}</p>
+                            <p><strong>내 제출 [탐구 3]:</strong> ${found.r3}</p>
+                        </div>
+                        <div class="mt-2 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                            <p class="font-extrabold text-indigo-950 text-xs mb-1.5 flex items-center gap-1">
+                                <i data-lucide="award" class="w-4 h-4"></i> 담당 교사 최종 지도 의견 및 AI 피드백
+                            </p>
+                            <p class="text-xs text-gray-700 leading-relaxed whitespace-pre-line">${found.feedback || "선생님의 실시간 피드백 검토 대기 중입니다."}</p>
+                        </div>
+                    </div>
+                `;
+                showToast("보고서 제출 데이터를 정상 확인했습니다.", "success");
+            } else {
+                display.innerHTML = `<div class="text-center py-4 text-red-500 font-bold">입력하신 학번(${searchId})으로 제출된 분석 결과를 찾을 수 없습니다.</div>`;
+                showToast("입력된 학번과 매치되는 데이터가 발견되지 않았습니다.", "error");
+            }
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
